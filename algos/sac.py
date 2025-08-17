@@ -12,9 +12,9 @@ from algo.utils import ReplayBuffer, SoftQNetwork, SoftQNetworkWithAttention, Po
 class SAC():
     def __init__(self, state_dim, action_dim, action_range):
         self.num_training = 0
-        hidden_dim = 512 #512
+        hidden_dim = 128
 
-        self.replay_buffer_size = 20000
+        self.replay_buffer_size = 10000
         self.replay_buffer = ReplayBuffer(self.replay_buffer_size)
         self.soft_q_net1 = SoftQNetwork(state_dim, action_dim, hidden_dim).to(device)
         self.soft_q_net2 = SoftQNetwork(state_dim, action_dim, hidden_dim).to(device)
@@ -23,7 +23,6 @@ class SAC():
         self.policy_net = PolicyNetwork(state_dim, action_dim, hidden_dim, action_range).to(device)
         self.log_alpha = torch.zeros(1, dtype=torch.float32, requires_grad=True, device=device)
 
-
         for target_param, param in zip(self.target_soft_q_net1.parameters(), self.soft_q_net1.parameters()):
             target_param.data.copy_(param.data)
         for target_param, param in zip(self.target_soft_q_net2.parameters(), self.soft_q_net2.parameters()):
@@ -31,10 +30,10 @@ class SAC():
 
         self.soft_q_criterion1 = nn.MSELoss()
         self.soft_q_criterion2 = nn.MSELoss()
-        # 2.5e-4-->2e-4-->2e-3
-        soft_q_lr = 2e-4
-        policy_lr = 2e-4 #2e-3
-        alpha_lr = 2e-4
+ 
+        soft_q_lr = 2e-3
+        policy_lr = 2e-3 
+        alpha_lr = 2e-3
 
         self.soft_q_optimizer1 = optim.Adam(self.soft_q_net1.parameters(), lr=soft_q_lr)
         self.soft_q_optimizer2 = optim.Adam(self.soft_q_net2.parameters(), lr=soft_q_lr)
@@ -43,7 +42,6 @@ class SAC():
         self.action_dim =1
         self.action_range = 1
 
-    #0.9999-->0.99
     def train(self, batch_size, reward_scale=10., auto_entropy=True, target_entropy=-3, gamma=0.99, soft_tau=1e-2):
         state, action, reward, next_state, done = self.replay_buffer.sample(batch_size)
         # print('sample:', state, action,  reward, done)
@@ -110,7 +108,6 @@ class SAC():
         torch.save(self.soft_q_net1.state_dict(), path + 'q1.pth')
         torch.save(self.soft_q_net2.state_dict(), path + 'q2.pth')
         torch.save(self.policy_net.state_dict(), path + 'policy.pth')
-
         print('=============The SAC model is saved=============')
 
 
@@ -122,9 +119,9 @@ class SAC():
         self.target_soft_q_net2 = deepcopy(self.soft_q_net2)
 
     def get_bc_action(self, state):
-        """专门用于BC策略的动作生成"""
         state = torch.FloatTensor(state).unsqueeze(0).to(device)
         mean, _ = self.policy_net(state)
         action = self.action_range * torch.tanh(mean)
-        return action.detach().cpu().numpy().flatten()  # 确保返回1D数组 [action_dim]
+        return action.detach().cpu().numpy().flatten() 
+
 
