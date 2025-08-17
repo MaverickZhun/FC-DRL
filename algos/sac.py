@@ -48,8 +48,7 @@ class SAC():
         state, action, reward, next_state, done = self.replay_buffer.sample(batch_size)
         # print('sample:', state, action,  reward, done)
 
-        # 关键修正：确保动作维度正确
-        action = action.reshape(-1, self.action_dim)  # 强制转换为 [batch_size, action_dim]
+        action = action.reshape(-1, self.action_dim)  
         state = torch.FloatTensor(state).to(device)
         next_state = torch.FloatTensor(next_state).to(device)
         action = torch.FloatTensor(action).to(device)
@@ -128,3 +127,4 @@ class SAC():
         mean, _ = self.policy_net(state)
         action = self.action_range * torch.tanh(mean)
         return action.detach().cpu().numpy().flatten()  # 确保返回1D数组 [action_dim]
+
