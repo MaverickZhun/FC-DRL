@@ -6,7 +6,7 @@ from copy import deepcopy
 use_cuda = torch.cuda.is_available()
 device = torch.device("cuda" if use_cuda else "cpu")
 
-from algo.utils import ReplayBuffer, SoftQNetwork, SoftQNetworkWithAttention, PolicyNetwork
+from algo.utils import ReplayBuffer, SoftQNetwork, PolicyNetwork
 
 
 class SAC():
@@ -123,5 +123,6 @@ class SAC():
         mean, _ = self.policy_net(state)
         action = self.action_range * torch.tanh(mean)
         return action.detach().cpu().numpy().flatten() 
+
 
 
