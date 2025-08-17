@@ -21,15 +21,13 @@ class ReplayBuffer:
         if len(self.buffer) < self.capacity:
             self.buffer.append(None)
         # self.buffer[self.position] =  (state, action, reward, next_state, done)
-        # 确保动作存储为二维数组
-        action = np.array(action).reshape(-1)  # 转换为1D数组 (即使action_dim=1)，新增：
+        action = np.array(action).reshape(-1) 
         self.buffer[self.position] = (state, action, reward, next_state, done)
         self.position = int((self.position + 1) % self.capacity)  # as a ring buffer
 
     def sample(self, batch_size):
         batch = random.sample(self.buffer, batch_size)
         state, action, reward, next_state, done = map(np.stack, zip(*batch))  # stack for each element
-        # 转换为正确形状,新增：
         action = action.reshape(-1, 1)  # [B, action_dim=1]
         return state, action, reward, next_state, done
 
@@ -85,56 +83,6 @@ class SoftQNetwork(nn.Module):
         x = F.relu(self.linear3(x))
         x = self.linear4(x)
         return x
-
-class SoftQNetworkWithAttention(nn.Module):
-    def __init__(self, num_inputs, num_actions, hidden_size, num_heads=2, init_w=3e-3, attention_weight=0.05):
-        super(SoftQNetworkWithAttention, self).__init__()
-
-        self.num_inputs = num_inputs
-        self.num_actions = num_actions
-        self.hidden_size = hidden_size
-        self.num_heads = num_heads
-        self.attention_weight = attention_weight  # 控制自注意力的影响
-
-        # Linear layers for input processing
-        self.linear1 = nn.Linear(num_inputs + num_actions, hidden_size)
-        self.linear2 = nn.Linear(hidden_size, hidden_size)
-        self.linear3 = nn.Linear(hidden_size, hidden_size)
-
-        # Self-attention layer
-        self.attn = nn.MultiheadAttention(embed_dim=hidden_size, num_heads=num_heads, batch_first=True)
-
-        # Final output layer
-        self.linear4 = nn.Linear(hidden_size, 1)
-
-        # Initialize weights
-        self.linear4.weight.data.uniform_(-init_w, init_w)
-        self.linear4.bias.data.uniform_(-init_w, init_w)
-
-    def forward(self, state, action):
-        # Concatenate state and action as the input for the network
-        x = torch.cat([state, action], dim=1)  # (batch_size, state+action_dim)
-
-        # Pass through the first few layers
-        x = F.relu(self.linear1(x))  # (batch_size, hidden_size)
-        x = F.relu(self.linear2(x))
-        x = F.relu(self.linear3(x))
-
-        # Reshape for self-attention
-        x = x.unsqueeze(1)  # (batch_size, 1, hidden_size) to fit the expected input format
-
-        # Apply self-attention (not too much influence on the final result)
-        attn_output, _ = self.attn(x, x, x)  # (batch_size, 1, hidden_size)
-
-        # Remove the sequence dimension, return to (batch_size, hidden_size)
-        x = attn_output.squeeze(1)  # (batch_size, hidden_size)
-
-        # Apply the attention weight to reduce its effect
-        x = (1 - self.attention_weight) * F.relu(self.linear3(x)) + self.attention_weight * x
-
-        # Final output layer
-        q_value = self.linear4(x)  # (batch_size, 1)
-        return q_value
 
 class PolicyNetwork(nn.Module):
     def __init__(self, num_inputs, num_actions, hidden_size, action_range=1., init_w=3e-3, log_std_min=-20,
@@ -216,3 +164,4 @@ def setup_seed(seed):
     np.random.seed(seed)
     random.seed(seed)
     torch.backends.cudnn.deterministic = True
+
